@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  </head>
+
+  <body>
+    <div class="w-full min-h-screen bg-zinc-900 text-white p-6 flex justify-center items-center">
+      <div class="bg-zinc-800 p-6 rounded-lg shadow-lg w-96">
+        <!-- ✅ Flash Messages -->
+        <!-- ✅ Flash Messages (Only Rendered When They Exist) -->
+        <% if (success_msg && success_msg.length > 0) { %>
+            <div class="flash-message p-3 mb-4 text-green-500 bg-green-900 rounded-md"><%= success_msg %></div>
+        <% } %>
+        
+        <% if (error_msg && error_msg.length > 0) { %>
+            <div class="flash-message p-3 mb-4 text-red-500 bg-red-900 rounded-md"><%= error_msg %></div>
+        <% } %>
+        
+
+        <h3 class="text-3xl mb-5 text-center font-bold">Login Your Account</h3>
+
+        <form action="/login" method="post" class="flex flex-col gap-3">
+          <input
+            class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full"
+            type="email"
+            placeholder="Email"
+            name="email"
+            required
+          />
+
+          <input
+            class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full"
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+          />
+
+          <input
+            class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-md cursor-pointer w-full"
+            type="submit"
+            value="Login Account"
+          />
+        </form>
+
+        <!-- ✅ "Sign Up" Button Below -->
+        <div class="mt-4 text-center">
+          <p class="text-zinc-400">Don't have an account?</p>
+          <a
+            href="/"
+            class="px-3 py-2 mt-2 inline-block bg-green-500 hover:bg-green-600 text-white font-bold rounded-md"
+            >Sign Up</a
+          >
+        </div>
+      </div>
+    </div>
+    <script src="/javascripts/script.js"></script>
+  </body>
+</html>

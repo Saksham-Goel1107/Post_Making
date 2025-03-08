@@ -1,0 +1,11 @@
+/* Hide number input arrows for Chrome, Safari, Edge, and Opera */
+.no-arrow::-webkit-inner-spin-button,
+.no-arrow::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Hide number input arrows for Firefox */
+.no-arrow {
+    -moz-appearance: textfield;
+}
