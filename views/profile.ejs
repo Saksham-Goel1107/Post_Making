@@ -1,81 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profile</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-  </head>
 
-  <body class="bg-zinc-900 text-white p-6 min-h-screen">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile</title>
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+</head>
 
-    <!-- ✅ Flash Messages -->
-    <% if (success_msg && success_msg.length > 0) { %>
-      <div class="flash-message p-3 mb-4 text-green-500 bg-green-900 rounded-md">
-        <%= success_msg %>
-      </div>
-    <% } %>
+<body class="bg-zinc-900 text-white p-6 min-h-screen">
 
-    <% if (error_msg && error_msg.length > 0) { %>
-      <div class="flash-message p-3 mb-4 text-red-500 bg-red-900 rounded-md">
-        <%= error_msg %>
-      </div>
-    <% } %>
-
-    <!-- ✅ Logout Button -->
-    <div class="w-full flex justify-end">
-      <a class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-md text-sm" href="/logout">
-        Logout
-      </a>
+  <!-- Flash Messages -->
+  <% if (success_msg && success_msg.length> 0) { %>
+    <div class="flash-message p-3 mb-4 text-green-500 bg-green-900 rounded-md">
+      <%= success_msg %>
     </div>
+    <% } %>
 
-    <!-- ✅ User Greeting -->
-    <h3 class="text-3xl mt-4">
-      <span class="font-light">Hello</span>, <%= user.name %>
-    </h3>
-    <h5 class="mb-5 text-zinc-400">You can create a new post below</h5>
-
-    <!-- ✅ Post Creation Form -->
-    <form action="/post" method="post">
-      <textarea
-        name="postContent"
-        placeholder="What's on your mind?"
-        class="block w-full max-w-lg p-3 outline-none resize-none bg-transparent border-2 border-zinc-800 rounded-md"
-        required
-      ></textarea>
-      <input
-        type="submit"
-        value="Create New Post"
-        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md mt-2 cursor-pointer"
-      />
-    </form>
-
-    <!-- ✅ User Posts Section -->
-    <div class="posts mt-10">
-      <h3 class="text-zinc-400 mb-4">Your Posts</h3>
-      <div class="postcontainer">
-        <% if (user.posts && user.posts.length > 0) { %> 
-          <% user.posts.forEach(function(post) { %>
-            <div class="post mb-4 max-w-lg p-4 rounded-md border border-zinc-700 bg-zinc-800">
-              <h4 class="text-blue-400 text-lg font-semibold mb-2">@<%= user.name %></h4>
-              <p class="text-sm tracking-tight text-zinc-300"><%= post.content %></p>
-              
-              <!-- ✅ Like & Edit Buttons -->
-              <div class="btns flex mt-5 gap-4">
-                <a class="text-blue-400 hover:text-blue-300" href="/like/<%= post._id %>">
-                  ❤️ Like (<%= post.likes ? post.likes.length : 0 %>)
-                </a>
-                <a class="text-zinc-500 hover:text-zinc-300" href="/edit/<%= post._id %>">
-                  ✏️ Edit
-                </a>
-              </div>
-            </div>
-          <% }); %> 
-        <% } else { %>
-          <p class="text-zinc-600 mt-5">No posts yet. Start posting!</p>
+      <% if (error_msg && error_msg.length> 0) { %>
+        <div class="flash-message p-3 mb-4 text-red-500 bg-red-900 rounded-md">
+          <%= error_msg %>
+        </div>
         <% } %>
-      </div>
-    </div>
-    <script src="/javascripts/script.js"></script>
-  </body>
+
+          <!-- Logout Button -->
+          <div class="w-full flex justify-end">
+            <a class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-md text-sm" href="/logout">
+              Logout
+            </a>
+          </div>
+
+          <h3 class="text-3xl mt-4 flex items-center">
+            <a class="w-20 h-20 rounded-md inline-block mr-3 mb-2 overflow-hidden" href="/profile/upload"><img class="w-full h-full object-center" src="images/uploads/<%= user.profilepic %>" alt="">
+            </a><span
+              class="font-light">Hello</span>, <%= user.name %>
+          </h3>
+          <h5 class="mb-5 text-zinc-400">You can create a new post below</h5>
+
+          <!-- Post Creation -->
+          <form action="/post" method="post">
+            <textarea name="postContent" placeholder="What's on your mind?"
+              class="block w-full max-w-lg p-3 outline-none resize-none bg-transparent border-2 border-zinc-800 rounded-md"
+              required></textarea>
+            <input type="submit" value="Create New Post"
+              class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md mt-2 cursor-pointer" />
+          </form>
+
+          <!-- User Posts Section -->
+          <div class="posts mt-10">
+            <h3 class="text-zinc-400 mb-4">Your Posts</h3>
+            <div class="postcontainer">
+              <% if (user.posts && user.posts.length> 0) { %>
+                <% user.posts.forEach(function(post) { %>
+                  <div class="post mb-4 max-w-lg p-4 rounded-md border border-zinc-700 bg-zinc-800">
+                    <h4 class="text-blue-400 text-lg font-semibold mb-2">@<%= user.name %>
+                    </h4>
+                    <p class="text-sm tracking-tight text-zinc-300">
+                      <%= post.content %>
+                    </p>
+
+                    <!-- Like, dislike & Edit Buttons -->
+                    <div class="btns flex mt-5 gap-4">
+                      <%= post.likes ? post.likes.length : 0 %> Likes
+                        <% if (post.likes.includes(user._id)) { %>
+                          <a class="text-red-400 hover:text-red-300" href="/like/<%= post._id %>">
+                            👎 Dislike
+                          </a>
+                          <% } else { %>
+                            <a class="text-blue-400 hover:text-blue-300" href="/like/<%= post._id %>">
+                              ❤️ Like
+                            </a>
+                            <% } %>
+                              <a class="text-zinc-500 hover:text-zinc-300" href="/edit/<%= post._id %>">
+                                ✏️ Edit
+                              </a>
+                    </div>
+                  </div>
+                  <% }); %>
+                    <% } else { %>
+                      <p class="text-zinc-600 mt-5">No posts yet. Start posting!</p>
+                      <% } %>
+            </div>
+          </div>
+          <script src="/javascripts/script.js"></script>
+</body>
+
 </html>

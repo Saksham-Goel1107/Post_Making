@@ -1,4 +1,3 @@
-// ✅ Install required dependencies using:
 // npm install express ejs bcrypt cookie-parser mongoose jsonwebtoken connect-flash express-session dotenv
 
 const express = require("express");
@@ -11,6 +10,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const flash = require("connect-flash");
 const session = require("express-session");
+const upload = require("./config/multerrconfig")
 require('dotenv').config()
 const app = express();
 if (!process.env.JWT_SECRET) {
@@ -18,16 +18,14 @@ if (!process.env.JWT_SECRET) {
 }
 const jwtSecret = process.env.JWT_SECRET;
 
-// ✅ Set EJS as view engine
 app.set("view engine", "ejs");
 
-// ✅ Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser());
 
-// ✅ Session for Flash Messages
+// Flash Messages
 app.use(
   session({
     secret: jwtSecret,
@@ -38,14 +36,14 @@ app.use(
 );
 app.use(flash());
 
-// ✅ Middleware to pass flash messages to EJS
+// pass flash messages to EJS
 app.use((req, res, next) => {
   res.locals.success_msg = req.flash("success");
   res.locals.error_msg = req.flash("error");
   next();
 });
 
-// ✅ Authentication Middleware
+// Authentication 
 function isLoggedIn(req, res, next) {
   if (!req.cookies.token) {
     req.flash("error", "Please log in first");
@@ -63,7 +61,7 @@ function isLoggedIn(req, res, next) {
   }
 }
 
-// initial Routes
+// initial Route
 app.get("/", (req, res) => res.render("index"));
 
 //  Login Page
@@ -133,35 +131,35 @@ app.post("/post", isLoggedIn, async function (req, res) {
 
 app.get("/like/:id", isLoggedIn, async (req, res) => {
   try {
-      let post = await Post.findById(req.params.id);
-      if (!post) {
-          req.flash("error", "Post not found.");
-          return res.redirect("/profile");
-      }
+    let post = await Post.findById(req.params.id);
+    if (!post) {
+      req.flash("error", "Post not found.");
+      return res.redirect("/profile");
+    }
 
-      // Ensure likes array exists
-      if (!post.likes) {
-          post.likes = [];
-      }
+    if (!post.likes) {
+      post.likes = [];
+    }
 
-      // Check if user already liked the post (prevents duplicate likes)
-      if (!post.likes.includes(req.user.userid)) {
-          post.likes.push(req.user.userid);
-          await post.save();
-          req.flash("success", "Post liked!");
-      } else {
-          req.flash("error", "You already liked this post.");
-      }
+    if (!post.likes.includes(req.user.userid)) {
+      post.likes.push(req.user.userid);
+      await post.save();
+      req.flash("success", "Post liked!");
+    } else {
+      post.likes.splice(req.user.userid)
+      await post.save();
+      req.flash("success", "Post Disliked!");
+    }
   } catch (err) {
-      console.error("❌ Error liking post:", err);
-      req.flash("error", "Something went wrong.");
+    console.error("❌ Error liking post:", err);
+    req.flash("error", "Something went wrong.");
   }
   res.redirect("/profile");
 });
 
-  
 
-// ✅ Edit Post Route (Show Edit Form)
+
+// Edit Post Route
 app.get("/edit/:id", isLoggedIn, async (req, res) => {
   try {
     let post = await Post.findById(req.params.id);
@@ -178,29 +176,27 @@ app.get("/edit/:id", isLoggedIn, async (req, res) => {
 });
 
 app.post("/update/:id", isLoggedIn, async (req, res) => {
-    let { content } = req.body;
-  
-    try {
-      let post = await Post.findById(req.params.id);
-      if (!post) {
-        req.flash("error", "Post not found.");
-        return res.redirect("/profile");
-      }
-  
-      post.content = content; // ✅ Update post content
-      await post.save(); // ✅ Save changes
-  
-      req.flash("success", "Post updated successfully!");
-    } catch (err) {
-      console.error("❌ Error updating post:", err);
-      req.flash("error", "Something went wrong.");
-    }
-  
-    res.redirect("/profile");
-  });
-  
+  let { content } = req.body;
 
-// ✅ Login Logic
+  try {
+    let post = await Post.findById(req.params.id);
+    if (!post) {
+      req.flash("error", "Post not found.");
+      return res.redirect("/profile");
+    }
+
+    post.content = content;
+    await post.save();
+
+    req.flash("success", "Post updated successfully!");
+  } catch (err) {
+    console.error("❌ Error updating post:", err);
+    req.flash("error", "Something went wrong.");
+  }
+
+  res.redirect("/profile");
+});
+
 app.post("/login", async (req, res) => {
   let { email, password } = req.body;
 
@@ -223,7 +219,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Register User
 app.post("/register", async (req, res) => {
   let { email, age, password, name, username } = req.body;
 
@@ -244,7 +239,7 @@ app.post("/register", async (req, res) => {
       password: hashedPassword,
     });
 
-    let token = jwt.sign({ email, userid: newUser._id },jwtSecret, { expiresIn: "1h" });
+    let token = jwt.sign({ email, userid: newUser._id }, jwtSecret, { expiresIn: "1h" });
     res.cookie("token", token, { httpOnly: true });
 
     req.flash("success", "Registered successfully! Please log in.");
@@ -256,12 +251,38 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ✅ Logout
+// Logout
 app.get("/logout", (req, res) => {
   res.clearCookie("token");
   req.flash("success", "You have been logged out");
   res.redirect("/login");
 });
+
+app.get("/profile/upload", isLoggedIn, (req, res) => {
+  res.render("profileupload")
+});
+
+app.post("/upload", isLoggedIn, upload.single("image"), async (req, res) => {
+  try {
+    let user = await User.findOne({ email: req.user.email });
+
+    if (!user) {
+      req.flash("error", "User not found.");
+      return res.redirect("/profile");
+    }
+
+    user.profilepic = req.file.filename;
+    await user.save();
+
+    req.flash("success", "Profile picture updated successfully!");
+    res.redirect("/profile");
+  } catch (err) {
+    console.error("❌ Error uploading profile picture:", err);
+    req.flash("error", "Something went wrong. Please try again.");
+    res.redirect("/profile");
+  }
+});
+
 
 //  Start Server
 const PORT = process.env.PORT || 3000;

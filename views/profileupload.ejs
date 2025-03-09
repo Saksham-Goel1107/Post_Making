@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Image</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-zinc-900 text-white flex items-center justify-center min-h-screen p-6">
+    <div class="bg-zinc-800 p-8 rounded-2xl shadow-lg w-full max-w-md text-center">
+        
+        <!-- Heading -->
+        <h3 class="text-3xl mb-5 font-semibold text-blue-400">Upload Profile Picture</h3>
+
+        <!-- Upload Form -->
+        <form action="/upload" method="post" enctype="multipart/form-data" class="space-y-4">
+            
+            <!-- Custom File Input -->
+            <label class="block">
+                <span class="sr-only">Choose Profile Picture</span>
+                <input type="file" name="image"
+                    class="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg 
+                    file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white
+                    hover:file:bg-blue-500 transition-all cursor-pointer" required>
+            </label>
+
+            <!-- Upload Button -->
+            <button type="submit"
+                class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg 
+                transition-all cursor-pointer">
+                Upload Image
+            </button>
+        </form>
+
+        <!-- Back to Profile Button -->
+        <a href="/profile" 
+            class="block mt-4 w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg 
+            transition-all cursor-pointer text-center">
+            🔙 Back to Profile
+        </a>
+
+    </div>
+</body>
+</html>
