@@ -38,8 +38,13 @@ Post Making is a web application that allows users to create and edit posts effo
    ```
 3. Create a `.env` file and configure:
    ```env
+   PORT=your_port
    MONGO_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret_key
+   EMAIL_USER=your_email_address
+   EMAIL_PASS=your_email_app_password
+   RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+   RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
    ```
 4. Start the development server:
    ```sh

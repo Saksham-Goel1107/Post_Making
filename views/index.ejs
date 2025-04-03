@@ -11,14 +11,14 @@
 
 <body class="bg-zinc-900 text-white overflow-hidden">
 
-    <!-- Flash Messages -->
+    
     <div class="p-4">
         <%- include('partials/flash') %>
     </div>
 
-    <div class="w-full min-h-screen flex flex-col justify-center items-center">
-        <!-- ✅ Signup Box -->
-        <div class="bg-zinc-800 p-6 rounded-lg shadow-lg w-96">
+    <div class="w-full min-h-screen flex flex-col justify-start items-center">
+      
+        <div class="bg-zinc-800 p-6 rounded-lg  shadow-lg w-96">
             <h3 class="text-3xl mb-5 text-center font-bold">Create Account</h3>
 
             <form action="/register" method="post" class="flex flex-col gap-3">
@@ -31,17 +31,18 @@
                 <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="password" placeholder="Password" name="password" required>
                 
                 <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full no-arrow" type="number" placeholder="Age" name="age" required>
-                
-                <button class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-md mt-3 w-full">Create Account</button>
+                <div class="g-recaptcha" data-sitekey="<%= process.env.RECAPTCHA_SITE_KEY %>"></div>
+
+                <button class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-md mt-1 w-full">Create Account</button>
             </form>
         </div>
 
-        <!-- ✅ "Sign in" Section - Placed Below the Box -->
-        <div class="mt-6 text-center">
-            <p class="text-zinc-400">Already have an account?</p>
-            <a class="text-blue-500 hover:underline font-medium" href="/login">Sign in</a>
+        
+        <div class=" text-center">
+            <p class="text-zinc-400">Already have an account? <a class="text-blue-500 hover:underline font-medium" href="/login">Sign in</a></p>
         </div>
     </div>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 </body>
 </html>

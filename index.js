@@ -1,5 +1,3 @@
-// npm install express ejs bcrypt cookie-parser mongoose jsonwebtoken connect-flash express-session dotenv
-
 const express = require("express");
 const path = require("path");
 const mongoose = require("mongoose");
@@ -10,13 +8,15 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const flash = require("connect-flash");
 const session = require("express-session");
-const upload = require("./config/multerrconfig")
-require('dotenv').config()
+const upload = require("./config/multerrconfig");
+const verifyRecaptcha = require("./middlewares/recaptcha.js");
+require('dotenv').config();
 const app = express();
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not set in environment variables!");
 }
 const jwtSecret = process.env.JWT_SECRET;
+const { sendVerificationEmail, sendWelcomeEmail } = require("./middlewares/email.js");
 
 app.set("view engine", "ejs");
 
@@ -25,25 +25,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser());
 
-// Flash Messages
 app.use(
   session({
     secret: jwtSecret,
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: 5000 }, // Flash message auto-remove
+    cookie: { maxAge: 5000 },
   })
 );
 app.use(flash());
 
-// pass flash messages to EJS
 app.use((req, res, next) => {
   res.locals.success_msg = req.flash("success");
   res.locals.error_msg = req.flash("error");
   next();
 });
 
-// Authentication 
 function isLoggedIn(req, res, next) {
   if (!req.cookies.token) {
     req.flash("error", "Please log in first");
@@ -53,6 +50,12 @@ function isLoggedIn(req, res, next) {
   try {
     let data = jwt.verify(req.cookies.token, jwtSecret);
     req.user = data;
+
+    if (!req.user.isVerified) {
+      req.flash("error", "Please verify your email first.");
+      return res.redirect("/verify-otp");
+    }
+
     next();
   } catch (err) {
     res.clearCookie("token");
@@ -61,14 +64,34 @@ function isLoggedIn(req, res, next) {
   }
 }
 
-// initial Route
+function isVerificationPending(req, res, next) {
+  if (!req.cookies.token) {
+    req.flash("error", "Please log in first");
+    return res.redirect("/login");
+  }
+
+  try {
+    let data = jwt.verify(req.cookies.token, jwtSecret);
+    req.user = data;
+
+    if (req.user.isVerified) {
+      return res.redirect("/profile");
+    }
+
+    next();
+  } catch (err) {
+    res.clearCookie("token");
+    req.flash("error", "Session expired, please log in again");
+    res.redirect("/login");
+  }
+}
+
 app.get("/", (req, res) => res.render("index"));
 
-//  Login Page
 app.get("/login", (req, res) => {
   if (req.cookies.token) {
     try {
-      jwt.verify(req.cookies.token, jwtSecret); // Check if token is valid
+      jwt.verify(req.cookies.token, jwtSecret);
       req.flash("success", "You are already logged in!");
       return res.redirect("/profile");
     } catch (err) {
@@ -78,7 +101,6 @@ app.get("/login", (req, res) => {
   res.render("login");
 });
 
-// Profile Route 
 app.get("/profile", isLoggedIn, async (req, res) => {
   try {
     let user = await User.findOne({ email: req.user.email }).populate("posts");
@@ -128,7 +150,6 @@ app.post("/post", isLoggedIn, async function (req, res) {
   }
 });
 
-
 app.get("/like/:id", isLoggedIn, async (req, res) => {
   try {
     let post = await Post.findById(req.params.id);
@@ -146,7 +167,7 @@ app.get("/like/:id", isLoggedIn, async (req, res) => {
       await post.save();
       req.flash("success", "Post liked!");
     } else {
-      post.likes.splice(req.user.userid)
+      post.likes.splice(req.user.userid);
       await post.save();
       req.flash("success", "Post Disliked!");
     }
@@ -157,9 +178,6 @@ app.get("/like/:id", isLoggedIn, async (req, res) => {
   res.redirect("/profile");
 });
 
-
-
-// Edit Post Route
 app.get("/edit/:id", isLoggedIn, async (req, res) => {
   try {
     let post = await Post.findById(req.params.id);
@@ -197,7 +215,7 @@ app.post("/update/:id", isLoggedIn, async (req, res) => {
   res.redirect("/profile");
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", verifyRecaptcha, async (req, res) => {
   let { email, password } = req.body;
 
   try {
@@ -207,7 +225,11 @@ app.post("/login", async (req, res) => {
       return res.redirect("/login");
     }
 
-    let token = jwt.sign({ email, userid: user._id }, jwtSecret, { expiresIn: "1h" });
+    let token = jwt.sign(
+      { email, userid: user._id, isVerified: user.isVerified },
+      jwtSecret,
+      { expiresIn: "1h" }
+    );
     res.cookie("token", token, { httpOnly: true });
 
     req.flash("success", "Login successful!");
@@ -219,7 +241,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/register", async (req, res) => {
+app.post("/register", verifyRecaptcha, async (req, res) => {
   let { email, age, password, name, username } = req.body;
 
   try {
@@ -230,20 +252,28 @@ app.post("/register", async (req, res) => {
     }
 
     let hashedPassword = await bcrypt.hash(password, 10);
-
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
     let newUser = await User.create({
       username,
       email,
       age,
       name,
       password: hashedPassword,
+      verificationToken,
+      verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
     });
 
-    let token = jwt.sign({ email, userid: newUser._id }, jwtSecret, { expiresIn: "1h" });
+    let token = jwt.sign(
+      { email, userid: newUser._id, isVerified: false },
+      jwtSecret,
+      { expiresIn: "1h" }
+    );
     res.cookie("token", token, { httpOnly: true });
 
-    req.flash("success", "Registered successfully! Please log in.");
-    res.redirect("/login");
+    await sendVerificationEmail(email, verificationToken);
+
+    req.flash("success", "Registered successfully! Please verify your email.");
+    res.redirect("/verify-otp");
   } catch (err) {
     console.error("❌ Error during registration:", err);
     req.flash("error", "Something went wrong.");
@@ -251,7 +281,46 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Logout
+app.get("/verify-otp", isVerificationPending, (req, res) => {
+  res.render("otp");
+});
+
+app.post("/verify-otp", isVerificationPending, async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const user = await User.findOne({
+      verificationToken: otp,
+      verificationTokenExpiresAt: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      req.flash("error", "Invalid or expired OTP.");
+      return res.redirect("/verify-otp");
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    let token = jwt.sign(
+      { email: user.email, userid: user._id, isVerified: true },
+      jwtSecret,
+      { expiresIn: "1h" }
+    );
+    res.cookie("token", token, { httpOnly: true });
+
+    await sendWelcomeEmail(user.email, user.name);
+
+    req.flash("success", "Email verified successfully!");
+    res.redirect("/profile");
+  } catch (error) {
+    console.error("❌ Error during email verification:", error);
+    req.flash("error", "Something went wrong.");
+    res.redirect("/verify-otp");
+  }
+});
+
 app.get("/logout", (req, res) => {
   res.clearCookie("token");
   req.flash("success", "You have been logged out");
@@ -259,7 +328,7 @@ app.get("/logout", (req, res) => {
 });
 
 app.get("/profile/upload", isLoggedIn, (req, res) => {
-  res.render("profileupload")
+  res.render("profileupload");
 });
 
 app.post("/upload", isLoggedIn, upload.single("image"), async (req, res) => {
@@ -283,8 +352,6 @@ app.post("/upload", isLoggedIn, upload.single("image"), async (req, res) => {
   }
 });
 
-
-//  Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
