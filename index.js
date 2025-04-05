@@ -16,7 +16,7 @@ if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not set in environment variables!");
 }
 const jwtSecret = process.env.JWT_SECRET;
-const { sendVerificationEmail, sendWelcomeEmail } = require("./middlewares/email.js");
+const { sendVerificationEmail, sendWelcomeEmail,sendResetingVerificationEmail,sendpasswordchangetemplate } = require("./middlewares/email.js");
 
 app.set("view engine", "ejs");
 
@@ -86,7 +86,16 @@ function isVerificationPending(req, res, next) {
   }
 }
 
-app.get("/", (req, res) => res.render("index"));
+app.get("/", (req, res) => {
+  res.render("index", {
+    name: "",
+    username: "",
+    email: "",
+    age: "",
+    success_msg: req.flash("success"),
+    error_msg: req.flash("error"),
+  });
+});
 
 app.get("/login", (req, res) => {
   if (req.cookies.token) {
@@ -242,7 +251,7 @@ app.post("/login", verifyRecaptcha, async (req, res) => {
 });
 
 app.post("/register", verifyRecaptcha, async (req, res) => {
-  let { email, age, password, name, username } = req.body;
+  let { email, age, password, name, username, Confirm_password } = req.body;
 
   try {
     let user = await User.findOne({ email });
@@ -250,35 +259,64 @@ app.post("/register", verifyRecaptcha, async (req, res) => {
       req.flash("error", "User already exists");
       return res.redirect("/login");
     }
+    if (Confirm_password === password) {
+      let hashedPassword = await bcrypt.hash(password, 10);
+      const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+      let newUser = await User.create({
+        username,
+        email,
+        age,
+        name,
+        password: hashedPassword,
+        verificationToken,
+        verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      });
 
-    let hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-    let newUser = await User.create({
-      username,
-      email,
-      age,
-      name,
-      password: hashedPassword,
-      verificationToken,
-      verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-    });
+      let token = jwt.sign(
+        { email, userid: newUser._id, isVerified: false },
+        jwtSecret,
+        { expiresIn: "1h" }
+      );
+      res.cookie("token", token, { httpOnly: true });
 
-    let token = jwt.sign(
-      { email, userid: newUser._id, isVerified: false },
-      jwtSecret,
-      { expiresIn: "1h" }
-    );
-    res.cookie("token", token, { httpOnly: true });
+      await sendVerificationEmail(email, verificationToken);
 
-    await sendVerificationEmail(email, verificationToken);
-
-    req.flash("success", "Registered successfully! Please verify your email.");
-    res.redirect("/verify-otp");
+      req.flash("success", "Registered successfully! Please verify your email.");
+      res.redirect("/verify-otp");
+    } else {
+      req.flash("error", "Password and Confirm Password do not match");
+      return res.render("index", {
+        name: name || "",
+        username: username || "",
+        email: email || "",
+        age: age || "",
+        success_msg: req.flash("success"),
+        error_msg: req.flash("error"),
+      });
+    }
   } catch (err) {
     console.error("❌ Error during registration:", err);
     req.flash("error", "Something went wrong.");
-    res.redirect("/");
+    res.render("index", {
+      name: name || "",
+      username: username || "",
+      email: email || "",
+      age: age || "",
+      success_msg: req.flash("success"),
+      error_msg: req.flash("error"),
+    });
   }
+});
+
+app.get("/register", (req, res) => {
+  res.render("index", {
+    name: req.query.name || "",
+    username: req.query.username || "",
+    email: req.query.email || "",
+    age: req.query.age || "",
+    success_msg: req.flash("success"),
+    error_msg: req.flash("error"),
+  });
 });
 
 app.get("/verify-otp", isVerificationPending, (req, res) => {
@@ -349,6 +387,110 @@ app.post("/upload", isLoggedIn, upload.single("image"), async (req, res) => {
     console.error("❌ Error uploading profile picture:", err);
     req.flash("error", "Something went wrong. Please try again.");
     res.redirect("/profile");
+  }
+});
+
+app.get("/forgot",(req,res)=>{
+  res.render("forgot_password")
+})
+
+app.post("/forgotemail", verifyRecaptcha, async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      req.flash("error", "User not found.");
+      return res.redirect("/forgot");
+    }
+
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes expiry
+    await user.save();
+
+    await sendResetingVerificationEmail(email, verificationToken);
+
+    req.flash("success", "OTP sent to your email. Please verify.");
+    res.redirect(`/verify-reset?email=${encodeURIComponent(email)}`);
+  } catch (err) {
+    console.error("❌ Error sending OTP:", err);
+    req.flash("error", "Something went wrong. Please try again.");
+    res.redirect("/forgot");
+  }
+});
+
+app.get("/verify-reset", (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    req.flash("error", "Invalid request.");
+    return res.redirect("/forgot");
+  }
+  res.render("verify_reset", { email });
+});
+
+app.post("/verify-reset", async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const user = await User.findOne({
+      email,
+      verificationToken: otp,
+      verificationTokenExpiresAt: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      req.flash("error", "Invalid or expired OTP.");
+      return res.redirect(`/verify-reset?email=${encodeURIComponent(email)}`);
+    }
+
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    req.flash("success", "OTP verified. You can now reset your password.");
+    res.redirect(`/reset?email=${encodeURIComponent(email)}`);
+  } catch (err) {
+    console.error("❌ Error verifying OTP:", err);
+    req.flash("error", "Something went wrong. Please try again.");
+    res.redirect(`/verify-reset?email=${encodeURIComponent(email)}`);
+  }
+});
+
+app.get("/reset", (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    req.flash("error", "Invalid request.");
+    return res.redirect("/forgot");
+  }
+  res.render("reset_password", { email });
+});
+
+app.post("/resetpassword", verifyRecaptcha, async (req, res) => {
+  const { email, password, Confirm_password } = req.body;
+
+  if (password !== Confirm_password) {
+    req.flash("error", "Password and Confirm Password do not match.");
+    return res.redirect(`/reset?email=${encodeURIComponent(email)}`);
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      req.flash("error", "User not found.");
+      return res.redirect("/login");
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+
+    req.flash("success", "Password reset successfully! Please log in.");
+    await sendpasswordchangetemplate(user.email,user.name);
+    res.redirect("/login");
+  } catch (err) {
+    console.error("❌ Error resetting password:", err);
+    req.flash("error", "Something went wrong. Please try again.");
+    res.redirect(`/reset?email=${encodeURIComponent(email)}`);
   }
 });
 
