@@ -11,38 +11,38 @@
 
 <body class="bg-zinc-900 text-white overflow-hidden">
 
-    
-    <div class="p-4">
-        <%- include('partials/flash') %>
-    </div>
+    <% if (success_msg && success_msg.length > 0) { %>
+        <div class="flash-message p-3 mb-4 text-green-500 bg-green-900 rounded-md">
+            <%= success_msg %>
+        </div>
+    <% } %>
+    <% if (error_msg && error_msg.length > 0) { %>
+        <div class="flash-message p-3 mb-4 text-red-500 bg-red-900 rounded-md">
+            <%= error_msg %>
+        </div>
+    <% } %>
 
-    <div class="w-full min-h-screen flex flex-col justify-start items-center">
-      
-        <div class="bg-zinc-800 p-6 rounded-lg  shadow-lg w-96">
-            <h3 class="text-3xl mb-5 text-center font-bold">Create Account</h3>
+    <div class="w-full flex flex-col justify-start items-center">
+        <div class="bg-zinc-800 p-4 rounded-lg shadow-lg w-96">
+            <h3 class="text-2xl mb-5 text-center font-bold">Create Account</h3>
 
             <form action="/register" method="post" class="flex flex-col gap-3">
-                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="text" placeholder="Full Name" name="name" required>
-                
-                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="text" placeholder="Username" name="username" required>
-                
-                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="email" placeholder="Email" name="email" required>
-                
-                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="password" placeholder="Password" name="password" required>
-                
-                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full no-arrow" type="number" placeholder="Age" name="age" required>
+                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="text" value="<%= name || '' %>" placeholder="Full Name" name="name" required>
+                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="text" value="<%= username || '' %>" placeholder="Username" name="username" required>
+                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="email" value="<%= email || '' %>" placeholder="Email" name="email" required>
+                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="password" placeholder="Password" name="password" required pattern="(?=.*[!@#$%^&*])(?=.*[0-9])(?=.*[A-Z])(?=.*[a-z]).{8,}" title="Password must be at least 8 characters long, include at least one uppercase letter, one lowercase letter, one number, and one special character">
+                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full" type="password" placeholder="Confirm Password" name="Confirm_password" required>
+                <input class="px-3 py-2 outline-none bg-transparent border-2 border-zinc-600 rounded-md block w-full no-arrow" type="number" value="<%= age || '' %>" placeholder="Age" name="age" required>
                 <div class="g-recaptcha" data-sitekey="<%= process.env.RECAPTCHA_SITE_KEY %>"></div>
-
                 <button class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-md mt-1 w-full">Create Account</button>
             </form>
         </div>
 
-        
-        <div class=" text-center">
+        <div class="text-center">
             <p class="text-zinc-400">Already have an account? <a class="text-blue-500 hover:underline font-medium" href="/login">Sign in</a></p>
         </div>
     </div>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-
+<script src="/javascripts/script.js"></script>
 </body>
 </html>

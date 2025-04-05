@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="This is the Photo upload page page">
     <title>Upload Image</title>
     <link rel="stylesheet" href="/stylesheets/output.css">
 </head>
@@ -10,13 +11,13 @@
 <body class="bg-zinc-900 text-white flex items-center justify-center min-h-screen p-6">
     <div class="bg-zinc-800 p-8 rounded-2xl shadow-lg w-full max-w-md text-center">
         
-        <!-- Heading -->
+        
         <h3 class="text-3xl mb-5 font-semibold text-blue-400">Upload Profile Picture</h3>
 
-        <!-- Upload Form -->
+        
         <form action="/upload" method="post" enctype="multipart/form-data" class="space-y-4">
             
-            <!-- Custom File Input -->
+            
             <label class="block">
                 <span class="sr-only">Choose Profile Picture</span>
                 <input type="file" name="image"
@@ -25,7 +26,7 @@
                     hover:file:bg-blue-500 transition-all cursor-pointer" required>
             </label>
 
-            <!-- Upload Button -->
+            
             <button type="submit"
                 class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg 
                 transition-all cursor-pointer">
@@ -33,7 +34,7 @@
             </button>
         </form>
 
-        <!-- Back to Profile Button -->
+        
         <a href="/profile" 
             class="block mt-4 w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg 
             transition-all cursor-pointer text-center">
